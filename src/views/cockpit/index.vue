@@ -48,11 +48,53 @@
 
       <main class="main-content">
         <div class="panel-left">
+          <!-- <div class="chart-block" style="height: 357px;"> -->
           <div class="chart-block">
             <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">当月区县警情数排名</span>
             </div>
-            <div class="chart-area"><div class="placeholder-box">Bar Chart</div></div>
+            <!-- 左侧第一个模块 -->
+            <div class="chart-area ranking-container">
+              
+              <div class="top-rank-zone">
+                <div class="platform-img-wrapper">
+                  <img :src="require('@/assets/images/cockpit/底座.png')" class="full-img" alt="rank-base" />
+                </div>
+
+                <div class="top-three-items">
+                  <div class="rank-card rank-2" v-if="topThree[1]">
+                    <div class="card-bg" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/yellow_bg.png') + ')' }"></div>
+                    <div class="card-info">
+                      <span class="area-name">{{ topThree[1].name }}</span>
+                      <span class="area-val text-yellow">{{ topThree[1].value }}</span>
+                    </div>
+                  </div>
+                  <div class="rank-card rank-1" v-if="topThree[0]">
+                    <div class="card-bg" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/orange_bg.png') + ')' }"></div>
+                    <div class="card-info">
+                      <span class="area-name">{{ topThree[0].name }}</span>
+                      <span class="area-val text-orange">{{ topThree[0].value }}</span>
+                    </div>
+                  </div>
+                  <div class="rank-card rank-3" v-if="topThree[2]">
+                    <div class="card-bg" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/pink_bg.png') + ')' }"></div>
+                    <div class="card-info">
+                      <span class="area-name">{{ topThree[2].name }}</span>
+                      <span class="area-val text-pink">{{ topThree[2].value }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="other-rank-grid">
+                <div v-for="(item, index) in otherRanks" :key="index" class="other-item" 
+                     :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/blue_bg.png') + ')' }">
+                  <span class="other-name">{{ item.name }}</span>
+                  <span class="other-val">{{ item.value }}</span>
+                </div>
+              </div>
+
+            </div>
           </div>
           
           <div class="chart-block">
@@ -62,7 +104,7 @@
             <div class="chart-area"><div class="placeholder-box">Horizontal Bar</div></div>
           </div>
           
-          <div class="chart-block">
+          <div class="chart-block" style="height: 334px;">
              <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">处置方式</span>
             </div>
@@ -104,7 +146,7 @@
         </div>
 
         <div class="panel-right">
-          <div class="chart-block">
+          <div class="chart-block" style="height: 355px;">
              <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">恶意网址访问量趋势</span>
             </div>
@@ -128,7 +170,7 @@
             </div>
           </div>
           
-          <div class="chart-block">
+          <div class="chart-block" style="height: 325px;">
              <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">预警处置情况统计</span>
             </div>
@@ -149,6 +191,21 @@ export default {
       currentNav: 'home', // 默认选中首页
       warningUserCount: 167611, // 预警用户数
       handledUserCount: 167611, // 处置用户数
+      // 模拟后端返回的区县数据
+      districtData: [
+        { name: "弋阳县", value: 324 },
+        { name: "广丰区", value: 1200 },
+        { name: "余干县", value: 500 },
+        { name: "信州区", value: 1600 },
+        { name: "广信区", value: 1340 },
+        { name: "德兴市", value: 242 },
+        { name: "玉山县", value: 221 },
+        { name: "铅山县", value: 111 },
+        { name: "横峰县", value: 55 },
+        { name: "鄱阳县", value: 87 },
+        { name: "万年县", value: 56 },
+        { name: "婺源县", value: 345 }
+      ],
       centerCards: [
         { num: 5000, label: '72小时预警用户数' },
         { num: 700, label: '72小时处置用户数' },
@@ -162,6 +219,20 @@ export default {
         { phone: '177****9988', time: '19:35:45', area: '鄱阳县', status: '未处置' },
         { phone: '133****5566', time: '19:42:11', area: '余干县', status: '已处置' }
       ]
+    }
+  },
+  computed: {
+    // 对数据进行排序
+    sortedDistrictData() {
+      return [...this.districtData].sort((a, b) => b.value - a.value);
+    },
+    // 获取前三名
+    topThree() {
+      return this.sortedDistrictData.slice(0, 3);
+    },
+    // 获取剩余排名
+    otherRanks() {
+      return this.sortedDistrictData.slice(3);
     }
   },
   mounted() {
@@ -278,6 +349,7 @@ export default {
   font-size: 27px;
   color: #FFFFFF;
   padding-top: 4px;
+  // text-shadow: 0px 0px 3px rgba(126,196,255,0.39);
 }
 
 /* 选中发光效果 */
@@ -300,6 +372,8 @@ export default {
   
   display: flex; 
   align-items: flex-start; /* 顶部对齐 */
+  /* 关键修改：防止 flex 布局空间不足时挤压标题高度 */
+  flex-shrink: 0;
 }
 
 .title-text {
@@ -334,11 +408,162 @@ export default {
   pointer-events: none;
 }
 .panel-left, .panel-right, .panel-center { pointer-events: auto; }
-.panel-left, .panel-right { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding-bottom: 40px; }
+.panel-left, .panel-right {
+  display: flex; 
+  flex-direction: column; 
+  // justify-content: space-between; 
+  gap: 20px;
+  height: 100%;
+  padding-bottom: 40px;
+}
 .panel-center { display: flex; flex-direction: column; padding-top: 20px; }
-.chart-block { height: 32%; display: flex; flex-direction: column; }
+.chart-block { 
+  /* 删除 height: 32%; 让高度自适应或由 flex 权重控制 */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  /* 防止内容溢出 */
+  overflow: hidden;
+}
 .chart-area { flex: 1; margin-top: 10px; position: relative; }
 .placeholder-box { width: 100%; height: 100%; border: 2px dashed rgba(0, 210, 255, 0.2); background: rgba(0, 40, 80, 0.1); display: flex; justify-content: center; align-items: center; color: rgba(0, 210, 255, 0.5); }
+
+/* ================= 排名模块样式 ================= */
+.ranking-container {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+}
+
+/* --- 上半部分：前三名 + 图片底座 --- */
+.top-rank-zone {
+  position: relative;
+  /* 增加高度以容纳底座和卡片，避免挤压 */
+  height: 150px; 
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: 10px;
+}
+
+.platform-img-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  /* 宽度根据底座图片实际比例调整，建议 95% 或 100% */
+  width: 95%; 
+  height: auto;
+  z-index: 0; /* 放在最底层 */
+  pointer-events: none;
+  opacity: 0.9; /* 可选：微调透明度融合背景 */
+}
+
+/* 前三名卡片容器 (位置调整) */
+.top-three-items {
+  position: relative;
+  z-index: 10; /* 确保在底座之上 */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 50px; /* 间距微调 */
+  width: 100%;
+  /* 关键点：底部 Padding，决定卡片"站"在底座的什么高度 */
+  padding-bottom: 50px; 
+}
+
+.rank-card {
+  position: relative;
+  width: 155px;
+  height: 94px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
+}
+
+.card-bg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
+.card-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%; height: 100%;
+  justify-content: center;
+}
+
+.area-name {
+  font-family: 'Adobe Heiti Std';
+  color: #fff;
+  font-weight: normal;
+  font-size: 23px;
+  margin-bottom: 5px;
+  letter-spacing: 5px;
+}
+
+.area-val {
+  font-family: 'Adobe Heiti Std';
+  font-size: 23px;
+  margin-top: 5px;
+  letter-spacing: 3px;
+}
+
+.text-orange { color: #FFB256; text-shadow: 0 0 5px #FFB256; }
+.text-yellow { color: #FFD42B; text-shadow: 0 0 5px #FFD42B; }
+.text-pink { color: #F6AE96; text-shadow: 0 0 5px #F6AE96; }
+
+/* 第一名向上偏移 (加大偏移量以突显) */
+.rank-1 {
+  margin-bottom: 10px; /* 向上提，形成领奖台高度差 */
+}
+
+/* --- 下半部分：其他排名 Grid --- */
+.other-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 一行3个 */
+  gap: 15px;
+  padding: 0 20px;
+  max-height: 200px;
+  overflow: hidden; /* 防止溢出 */
+}
+
+.other-item {
+  height: 50px; /* 预估高度 */
+  background-size: 100% 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  color: #fff;
+  font-size: 18px;
+}
+
+.other-name {
+  font-family: 'Adobe Heiti Std';
+  color: #fff;
+  font-weight: normal;
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+
+.other-val {
+  color: #00d2ff;
+  font-family: 'Adobe Heiti Std';
+  font-size: 22px;
+  letter-spacing: 2px;
+}
 
 /* 数字与表格 */
 .digital-board { height: 150px;
@@ -410,6 +635,7 @@ export default {
 }
 .digital-num-box { background: rgba(30, 58, 138, 0.3); padding: 10px 40px; border-left: 2px solid rgba(0, 210, 255, 0.5); border-right: 2px solid rgba(0, 210, 255, 0.5); border-radius: 8px; }
 .digital-num { color: white; font-size: 80px; font-weight: bold; font-family: Arial, sans-serif; text-shadow: 0 0 20px #00d2ff; }
+
 /* ================= 核心指标区 (72/24小时) 样式 */
 .center-cards { 
   /* 容器尺寸：w:1148px, h:206px */
