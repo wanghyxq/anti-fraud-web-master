@@ -47,6 +47,13 @@ export const constantRoutes = [
     hidden: true
   },
   {
+    path: '/cockpit',
+    name: 'Cockpit',
+    component: () => import('@/views/cockpit/index'),
+    hidden: true,
+    meta: { title: '反诈预警驾驶舱' }
+  },
+  {
     path: '/register',
     component: () => import('@/views/register'),
     hidden: true
@@ -61,10 +68,23 @@ export const constantRoutes = [
     component: () => import('@/views/error/401'),
     hidden: true
   },
+  // {
+  //   path: '',
+  //   component: Layout,
+  //   redirect: 'index',
+  //   children: [
+  //     {
+  //       path: 'index',
+  //       component: () => import('@/views/index'),
+  //       name: 'Index',
+  //       meta: { title: '首页', icon: 'dashboard', affix: true }
+  //     }
+  //   ]
+  // },
   {
     path: '',
     component: Layout,
-    redirect: 'index',
+    redirect: '/cockpit', // <--- 修改这里，登录后直接跳向驾驶舱
     children: [
       {
         path: 'index',
@@ -74,6 +94,7 @@ export const constantRoutes = [
       }
     ]
   },
+  
   {
     path: '/user',
     component: Layout,
