@@ -97,11 +97,31 @@
             </div>
           </div>
           
-          <div class="chart-block">
+          <div class="chart-block" style="height: 380px;">
              <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">恶意网址类型访问量排名</span>
             </div>
-            <div class="chart-area"><div class="placeholder-box">Horizontal Bar</div></div>
+            <div class="chart-area url-rank-container">
+              <div class="scroll-wrapper">
+                <div v-for="(item, index) in doubleUrlData" :key="index" class="url-row">
+                  <div class="url-bg" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/url_bg.png') + ')' }"></div>
+                  
+                  <div class="url-content">
+                    <span class="url-name text-ellipsis">{{ item.name }}</span>
+                    
+                    <div class="url-bar-box">
+                      <div class="bar-bg">
+                        <div class="bar-fill" :style="{ width: (item.value / maxUrlValue * 100) + '%' }">
+                          <div class="bar-shine"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <span class="url-value">{{ item.value }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           
           <div class="chart-block" style="height: 334px;">
@@ -191,6 +211,17 @@ export default {
       currentNav: 'home', // 默认选中首页
       warningUserCount: 167611, // 预警用户数
       handledUserCount: 167611, // 处置用户数
+      // 恶意网址数据
+      maliciousUrlData: [
+        { "name": "高危聊天APP主控网址", "value":60 },
+        { "name": "虚假投资APP", "value": 48 },
+        { "name": "网络刷单网址", "value": 42 },
+        { "name": "虚假赌博APP", "value": 32 },
+        { "name": "共享屏幕主控网址", "value": 13 },
+        { "name": "虚假投资诈骗网址", "value": 12 },
+        { "name": "虚假赌博诈骗网址", "value": 7 },
+        { "name": "钓鱼仿冒网址", "value": 6 }
+      ],
       // 模拟后端返回的区县数据
       districtData: [
         { name: "弋阳县", value: 324 },
@@ -233,6 +264,21 @@ export default {
     // 获取剩余排名
     otherRanks() {
       return this.sortedDistrictData.slice(3);
+    },
+    // 构造双倍数据用于无缝滚动
+    doubleUrlData() {
+      return [...this.maliciousUrlData, ...this.maliciousUrlData];
+    },
+    // 计算最大值，用于进度条百分比 (防止除以0)
+    // maxUrlValue() {
+    //   const max = Math.max(...this.maliciousUrlData.map(item => item.value));
+    //   return max === 0 ? 1 : max;
+    // }
+    // 计算总和，用于进度条百分比
+    maxUrlValue() {
+      // 累加所有值为总和
+      const total = this.maliciousUrlData.reduce((sum, item) => sum + item.value, 0);
+      return total === 0 ? 1 : total;
     }
   },
   mounted() {
@@ -284,6 +330,153 @@ export default {
 @font-face {
   font-family: 'Adobe Heiti Std';
   src: local('Adobe Heiti Std'), local('SimHei'), local('Heiti SC');
+}
+
+@font-face {
+  font-family: 'SourceHanSansCN';
+  /* 请确保字体路径正确，若无字体文件可暂时注释 */
+  src: local('Source Han Sans CN'), local('SimHei'); 
+  font-weight: bold;
+}
+
+/* ================= 恶意网址排名样式 ================= */
+.url-rank-container {
+  overflow: hidden;
+  position: relative;
+  padding: 10px 0;
+  height: 100%; 
+  box-sizing: border-box;
+}
+
+/* 滚动动画容器 */
+.scroll-wrapper {
+  /* 动画：向上滚动，时间根据数据量调整，linear 保证匀速 */
+  animation: scrollUp 20s linear infinite; 
+}
+
+/* 鼠标悬停暂停动画 (可选优化) */
+.scroll-wrapper:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scrollUp {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); } /* 滚动一半的高度（即一组数据的长度），配合双倍数据实现无缝 */
+}
+
+/* 单行样式 */
+.url-row {
+  position: relative;
+  width: 100%;
+  height: 56px; /* 背景图高度 */
+  margin-bottom: 12px; /* 行间距 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+/* 悬停高亮 */
+.url-row:hover {
+  filter: brightness(1.2);
+  transform: scale(1.01);
+}
+
+/* 背景图 */
+.url-bg {
+  position: absolute;
+  top: 0; 
+  left: 50%;
+  width: 738px; /* 设计稿宽度 */
+  height: 100%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 0;
+  /* 居中背景图 */
+  transform: translateX(-50%);
+  opacity: 0.8;
+}
+
+/* 内容布局 */
+.url-content {
+  position: relative;
+  z-index: 1;
+  width: 90%; /* 内容宽度 */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+/* 1. 网址类型名称 */
+.url-name {
+  width: 160px; /* 蓝湖参数 */
+  height: 24px;
+  font-family: 'SourceHanSansCN', 'Microsoft YaHei', sans-serif;
+  font-weight: bold;
+  font-size: 24px;
+  color: #75E1EF; /* 蓝湖参数 */
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 5px rgba(117, 225, 239, 0.4);
+}
+
+/* 2. 占比条容器 */
+.url-bar-box {
+  flex: 1; /* 占据中间剩余空间 */
+  margin: 0 20px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.bar-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08); /* 槽底色 */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  /* 蓝青色渐变进度条 */
+  background: linear-gradient(90deg, #007EFF 0%, #01FFF6 100%);
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(1, 255, 246, 0.6);
+  transition: width 1s ease;
+}
+
+/* 进度条末端的小光点装饰 */
+.bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 5px #fff;
+}
+
+/* 3. 访问量数值 */
+.url-value {
+  width: 81px; /* 蓝湖参数 */
+  height: 30px;
+  font-family: 'SourceHanSansCN', sans-serif;
+  font-weight: bold;
+  font-size: 30px;
+  color: #95AEEC; /* 蓝湖参数 */
+  line-height: 30px;
+  text-align: right;
+  text-shadow: 0 0 5px rgba(149, 174, 236, 0.4);
 }
 
 /* ================= 基础布局 ================= */
@@ -429,7 +622,7 @@ export default {
 .chart-area { flex: 1; margin-top: 10px; position: relative; }
 .placeholder-box { width: 100%; height: 100%; border: 2px dashed rgba(0, 210, 255, 0.2); background: rgba(0, 40, 80, 0.1); display: flex; justify-content: center; align-items: center; color: rgba(0, 210, 255, 0.5); }
 
-/* ================= 排名模块样式 ================= */
+/* ================= 区县排名模块样式 ================= */
 .ranking-container {
   display: flex;
   flex-direction: column;
@@ -565,6 +758,8 @@ export default {
   letter-spacing: 2px;
 }
 
+/* ================= 数字模块样式 ================= */
+
 /* 数字与表格 */
 .digital-board { height: 150px;
   display: flex;
@@ -636,7 +831,7 @@ export default {
 .digital-num-box { background: rgba(30, 58, 138, 0.3); padding: 10px 40px; border-left: 2px solid rgba(0, 210, 255, 0.5); border-right: 2px solid rgba(0, 210, 255, 0.5); border-radius: 8px; }
 .digital-num { color: white; font-size: 80px; font-weight: bold; font-family: Arial, sans-serif; text-shadow: 0 0 20px #00d2ff; }
 
-/* ================= 核心指标区 (72/24小时) 样式 */
+/* ================= 核心指标区 (72/24小时) 样式 =============== */
 .center-cards { 
   /* 容器尺寸：w:1148px, h:206px */
   width: 1148px;
