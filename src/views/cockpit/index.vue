@@ -124,14 +124,35 @@
             </div>
           </div>
           
-          <div class="chart-block" style="height: 334px;">
+          <div class="chart-block">
              <div class="panel-title" :style="{ backgroundImage: 'url(' + require('@/assets/images/cockpit/title.png') + ')' }">
               <span class="title-text">处置方式</span>
             </div>
-            <div class="chart-area"><div class="placeholder-box">Pie Chart</div></div>
+
+            <div class="chart-area disposal-container">
+              <div class="chart-left-zone"> 
+                <div class="visual-wrapper">
+                  <div class="total-floating">
+                    <span class="total-num">{{ disposalTotal }}</span>
+                    <span class="total-label">处置总数</span>
+                  </div>
+                  <div ref="disposalChart" class="gl-chart-box"></div>
+                  <img :src="require('@/assets/images/cockpit/处置底座.png')" class="base-img-box" alt="base" />
+                </div>  
+              </div>
+
+              <div class="legend-right-zone">
+                <div v-for="(item, index) in sortedDisposalData" :key="index" class="legend-item">
+                  <div class="legend-rect" :style="{ background: colorList[index] }"></div>
+                  <span class="legend-name">{{ item.name }}</span>
+                  <span class="legend-val">{{ item.value }}</span>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
-
         <div class="panel-center">
           <div class="digital-board">
             <div class="digital-item">
@@ -203,12 +224,23 @@
 </template>
 
 <script>
+import * as echarts from 'echarts';
+import 'echarts-gl'; // 必须引入 GL 库
+
 export default {
   name: 'AntiFraudCockpit',
   data() {
     return {
       screenStyle: {},
       currentNav: 'home', // 默认选中首页
+      // 颜色配置：黄(Max), 蓝(Mid), 红(Min)
+      colorList: ['#FFE00D', '#20DDFF', '#FF674E'],
+      disposalData: [
+        { name: "电话预警", value: 11 },
+        { name: "短信预警", value: 4 },
+        { name: "上门预警", value: 7 }
+      ],
+      disposalChartInstance: null, // 图表实例
       warningUserCount: 167611, // 预警用户数
       handledUserCount: 167611, // 处置用户数
       // 恶意网址数据
@@ -253,7 +285,15 @@ export default {
     }
   },
   computed: {
-    // 对数据进行排序
+    // 对处置数据进行排序
+    sortedDisposalData() {
+      return [...this.disposalData].sort((a, b) => b.value - a.value);
+    },
+    // 计算总数
+    disposalTotal() {
+      return this.disposalData.reduce((p, c) => p + c.value, 0);
+    },
+    // 对区县数据进行排序
     sortedDistrictData() {
       return [...this.districtData].sort((a, b) => b.value - a.value);
     },
@@ -284,11 +324,147 @@ export default {
   mounted() {
     this.handleResize();
     window.addEventListener('resize', this.handleResize);
+
+    // 初始化 3D 图表
+    this.$nextTick(() => {
+      this.initDisposalChart();
+    });
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    // 销毁实例，防止内存泄漏
+    if (this.disposalChartInstance) {
+      this.disposalChartInstance.dispose();
+    }
   },
   methods: {
+    // === 新增：3D 扇形曲面生成算法 (核心) ===
+    getParametricEquation(startRatio, endRatio, isSelected, isHovered, k, h) {
+      // 计算弧度
+      const midRatio = (startRatio + endRatio) / 2;
+      const startRadian = startRatio * Math.PI * 2;
+      const endRadian = endRatio * Math.PI * 2;
+      
+      // 选中偏移量（本例暂不交互，设为0）
+      const offsetX = 0;
+      const offsetY = 0;
+
+      // === 调整缩放系数 ===
+      // 将原先的 * 0.1 改为 * 0.4 (根据底座大小微调，0.4~0.45 应该刚好撑满)
+      // 注意：z 轴的 scaling (高度) 暂时保持 0.1 或根据需要调整，否则可能太高
+      const rScale = 0.45; // 半径缩放系数 (控制胖瘦/大小)
+
+      // 返回参数化方程对象
+      return {
+        u: { min: -Math.PI, max: Math.PI * 3, step: Math.PI / 32 },
+        v: { min: 0, max: Math.PI * 2, step: Math.PI / 20 },
+        x: function (u, v) {
+          // 修改处：将最后的 * 0.1 替换为 * rScale (即 0.4)
+          if (u < startRadian) return offsetX + Math.cos(startRadian) * (1 + Math.cos(v) * k) * rScale;
+          if (u > endRadian) return offsetX + Math.cos(endRadian) * (1 + Math.cos(v) * k) * rScale;
+          return offsetX + Math.cos(u) * (1 + Math.cos(v) * k) * rScale;
+        },
+        y: function (u, v) {
+          // 修改处：将最后的 * 0.1 替换为 * rScale (即 0.4)
+          if (u < startRadian) return offsetY + Math.sin(startRadian) * (1 + Math.cos(v) * k) * rScale;
+          if (u > endRadian) return offsetY + Math.sin(endRadian) * (1 + Math.cos(v) * k) * rScale;
+          return offsetY + Math.sin(u) * (1 + Math.cos(v) * k) * rScale;
+        },
+        z: function (u, v) {
+          if (u < -Math.PI * 0.5) return Math.sin(u);
+          if (u > Math.PI * 2.5) return Math.sin(u) * h * 0.1;
+          // z 轴通常不需要跟 xy 一样放大，否则柱子会飞出屏幕。保持 0.1 或微调即可。
+          return Math.sin(v) > 0 ? 1 * h * 0.1 : -1;
+        }
+      };
+    },
+
+    // === 新增：生成 Series 数据 ===
+    getPie3D(pieData, internalDiameterRatio) {
+      let series = [];
+      let sumValue = 0;
+      let startValue = 0;
+      let endValue = 0;
+      let k = typeof internalDiameterRatio !== 'undefined' ? (1 - internalDiameterRatio) / (1 + internalDiameterRatio) : 1 / 3;
+
+      // 计算总和
+      pieData.forEach(item => sumValue += item.value);
+
+      // 生成每个扇区
+      pieData.forEach((item, index) => {
+        endValue = startValue + item.value;
+        const startRatio = startValue / sumValue;
+        const endRatio = endValue / sumValue;
+        
+        // 核心：根据数值计算高度 (基础高度 5 + 占比 * 30)
+        // 这样数值越大的饼图，看起来越高 (3D Rose Effect)
+        const height = 5 + (item.value / sumValue) * 35; 
+
+        const equation = this.getParametricEquation(startRatio, endRatio, false, false, k, height);
+
+        series.push({
+          name: item.name,
+          type: 'surface',
+          parametric: true,
+          wireframe: { show: false }, // 隐藏网格线
+          itemStyle: {
+            color: this.colorList[index],
+            // opacity: 0.9 // 稍微透明一点，更有质感
+          },
+          parametricEquation: equation
+        });
+
+        startValue = endValue;
+      });
+      return series;
+    },
+
+    // === 新增：初始化图表 ===
+    initDisposalChart() {
+      if (!this.$refs.disposalChart) return;
+      if (this.disposalChartInstance) this.disposalChartInstance.dispose();
+      
+      this.disposalChartInstance = echarts.init(this.$refs.disposalChart);
+
+      // 0.6 是内径比例，制造空心环效果
+      const series = this.getPie3D(this.sortedDisposalData, 0.6);
+      
+      const option = {
+        // 3D 坐标轴配置（必须存在但隐藏）
+        xAxis3D: { min: -1, max: 1 },
+        yAxis3D: { min: -1, max: 1 },
+        zAxis3D: { min: -1, max: 1 },
+        grid3D: {
+          show: false, // 隐藏边框
+          boxHeight: 8, // 3D 容器高度 
+          // 视角控制：模拟设计稿的俯视角度
+          viewControl: {
+            alpha: 22, // 俯仰角
+            beta: 10,  // 旋转角
+            distance: 80, // 视距
+            autoRotate: false, // 开启自动旋转
+            autoRotateSpeed: 10,
+            panSensitivity: 0, 
+            zoomSensitivity: 0
+          },
+          // 光照配置
+          light: {
+            main: {
+              intensity: 1.5,
+              shadow: true,
+              alpha: 30,
+              beta: 10
+            },
+            ambient: { 
+              intensity: 0.3  
+            }
+          }
+        },
+        series: series 
+      };
+
+      this.disposalChartInstance.setOption(option);
+    },
     handleResize() {
       const designWidth = 2880;
       const designHeight = 1450;
@@ -337,6 +513,139 @@ export default {
   /* 请确保字体路径正确，若无字体文件可暂时注释 */
   src: local('Source Han Sans CN'), local('SimHei'); 
   font-weight: bold;
+}
+
+/* ================= 处置方式 (3D GL版) 样式 ================= */
+.disposal-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+  height: 100%;
+}
+
+/* --- 左侧区域 --- */
+.chart-left-zone {
+  /* 增加权重，给左侧留出足够空间放置 400px 的底座 */
+  flex: 1.5; 
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end; /* 底部对齐，防止向上顶到标题 */
+  padding-bottom: 10px; /* 稍微留点底边距 */
+}
+
+/* 新增：视觉包裹容器 */
+.visual-wrapper {
+  /* 【关键】在这里控制大小，父容器会自动感知这个宽度 */
+  width: 400px; 
+  position: relative; /* 作为子元素绝对定位的锚点 */
+  display: flex;
+  justify-content: center;
+  /* 不需要设置高度，高度由底座图片和 padding 撑开 */
+}
+
+/* 总数悬浮 */
+.total-floating {
+  position: absolute;
+  /* 定位在 wrapper 的顶部区域 */
+  top: 5px; 
+  // left: 55%;
+  transform: translateX(3%);
+  z-index: 20;
+  text-align: center;
+  width: 100%;
+}
+
+.total-num {
+  font-family: 'Adobe Heiti Std', 'SimHei';
+  font-weight: normal;
+  font-size: 48px;
+  color: #EAFF00;
+  text-shadow: 0px 3px 7px rgba(0,0,0,0.35);
+  line-height: 1;
+}
+
+.total-label {
+  font-family: 'Adobe Heiti Std', 'SimHei';
+  font-size: 24px;
+  color: #EAFF00;
+  opacity: 0.8;
+  margin-top: 5px;
+  display: block;
+}
+
+/* 底座图片 */
+.base-img-box {
+  width: 100%; /* 跟随 wrapper 宽度 */
+  height: auto;
+  display: block; /* 消除图片底部默认间隙 */
+  /* 不需要 absolute bottom，它现在是实体元素 */
+  opacity: 0.9;
+  /* 可选：给图片加一点上边距，把空间留给上面的 3D 柱子 */
+  margin-top: -40px; 
+  /* 为什么加 margin-top？因为 3D 柱子很高，如果底座直接顶在上面，柱子会溢出 wrapper 顶部遮挡标题。
+     这个 margin-top 实际上是给 absolute 的图表留出“显示空间”。 */
+}
+
+/* GL 图表容器 */
+.gl-chart-box {
+  position: absolute;
+  width: 59%;
+  height: 230px; /* 给足够的高度显示 3D 柱子 */
+  /* 关键：定位到底座图片的“平面”位置 */
+  bottom: 5px; 
+  z-index: 10;
+  pointer-events: none; /* 让鼠标事件能穿透到底层(如果需要) */ 
+}
+
+/* --- 右侧：图例列表 --- */
+.legend-right-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 50px; /* 图例间距 */
+  padding: 0 10px;
+  margin-bottom: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* 矩形标识: 20x23 */
+.legend-rect {
+  width: 20px;
+  height: 23px;
+  margin-right: 15px;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.2); /* 增加一点发光质感 */
+}
+
+/* 处置方式名: 30px, White */
+.legend-name {
+  width: 122px; /* 蓝湖参数 */
+  font-family: 'Adobe Heiti Std', 'SimHei';
+  font-weight: normal;
+  font-size: 26px; /* 原稿 30px 容易导致换行，建议 26px */
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  margin-right: 5px;
+}
+
+/* 处置量: 30px, Blue */
+.legend-val {
+  flex: 1;
+  font-family: 'Adobe Heiti Std', 'SimHei';
+  font-weight: normal;
+  font-size: 30px;
+  color: #00E3FE; /* 蓝湖参数 */
+  text-align: right;
+  min-width: 50px;
 }
 
 /* ================= 恶意网址排名样式 ================= */
