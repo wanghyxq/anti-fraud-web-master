@@ -21,7 +21,9 @@ router.beforeEach((to, from, next) => {
     to.meta.title && store.dispatch('settings/setTitle', to.meta.title)
     /* has token*/
     if (to.path === '/login') {
-      next({ path: '/' })
+      // 已登录状态下访问登录页，强制跳转到驾驶舱
+      next({ path: '/cockpit' })
+      // next({ path: '/' })
       NProgress.done()
     } else if (isWhiteList(to.path)) {
       next()

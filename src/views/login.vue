@@ -142,7 +142,9 @@ export default {
             Cookies.remove('rememberMe')
           }
           this.$store.dispatch("Login", this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || "/" }).catch(()=>{})
+            // 登录成功后，强制跳转到驾驶舱 /cockpit
+            // this.$router.push({ path: this.redirect || "/" }).catch(()=>{})
+            this.$router.push({ path: "/cockpit" }).catch(()=>{});
           }).catch(() => {
             this.loading = false
             if (this.captchaEnabled) {

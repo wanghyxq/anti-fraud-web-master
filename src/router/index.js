@@ -84,7 +84,7 @@ export const constantRoutes = [
   {
     path: '',
     component: Layout,
-    redirect: '/cockpit', // <--- 修改这里，登录后直接跳向驾驶舱
+    redirect: 'index', 
     children: [
       {
         path: 'index',
@@ -94,7 +94,17 @@ export const constantRoutes = [
       }
     ]
   },
-  
+  // 驾驶舱路由 (移动到首页后面，并显示在菜单中)
+  {
+    path: '/cockpit',
+    name: 'Cockpit',
+    component: () => import('@/views/cockpit/index'),
+    // hidden: true, // <--- 删掉或注释掉这一行，让它显示在菜单里
+    meta: { 
+      title: '反诈预警驾驶舱', 
+      icon: 'monitor' // <--- 添加图标，'monitor' 是项目中已有的图标
+    }
+  },
   {
     path: '/user',
     component: Layout,
